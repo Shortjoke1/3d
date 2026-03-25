@@ -1,6 +1,5 @@
 const container = document.querySelector(".container")
 var size = document.querySelector(".size").value
-var ran = document.querySelector(".range").value
 const recalcBtn = document.querySelector(".recalc")
 const zoomBtn = document.querySelector(".zoom")
 
@@ -47,81 +46,49 @@ function hsv_to_rgb(h, s, v){
     }
 }
 
-function calculateBounds(){
-    return [-2*radius+midpoint[0],2*radius+midpoint[0],-2*radius+midpoint[1],2*radius+midpoint[1]]
+function dot(a, b){
+    return a[0]*b[0]+a[1]*b[1]
 }
-
-function lerp(a, b, t){
-    return a+(b-a)*t
+function perpendicular(v){
+    return [v[1],-v[0]]
 }
-
-function cardioid(x,y,a){
-    return (x**2+y**2+x*a)**2<=a**2*(x**2+y**2)
+function pointOnRight(a, b, p){
+    let ap = [p[0]-a[0],p[1]-a[1]]
+    let abPerp = perpendicular([b[0]-a[0],b[1]-a[1]])
+    return dot(ap, abPerp) > 0
 }
-
-function circle(x,y,a){
-    return x**2+y**2<=a**2
+function pointInTri(a, b, c, p){
+    let sideAB = pointOnRight(a, b, p)
+    let sideBC = pointOnRight(b, c, p)
+    let sideCA = pointOnRight(c, a, p)
+    return sideAB == sideBC && sideBC == sideCA
 }
-
-function inSet(coords){
-    var iteration=0
-    const x=lerp(bounds[0],bounds[1],coords[1]/size)
-    const y=lerp(bounds[2],bounds[3],coords[0]/size)
-    var x0=x
-    var y0=y
-    if (cardioid(x-0.25,y,0.5)||circle(x+1,y,0.25)){
-        return [0,0,0]
-    }
-    for (let i = 0; i < ran; i++){
-        var zx=(x0**2-y0**2+x)
-        var zy=(2*x0*y0+y)
-        if (zx**2+zy**2<=4){ //calculates if a pixel is in the set
-            var x0=zx
-            var y0=zy
-            var iteration=i+1
-        } else{
-            break
-        }
-    }
-    if (iteration==ran){
-        return [0,0,0]
-    }
-    const h=2*iteration
-    const s=0.8
-    const v=Math.sin((2*iteration)/10)/4+3/4
-    return hsv_to_rgb(h/255,s,v)
-}
-
-function recalc(){
+function draw(){
     container.innerHTML = ""
-    bounds = calculateBounds()
-    size = document.querySelector(".size").value
-    ran = document.querySelector(".range").value
-    draw(size)
-}
-
-function draw(size){
     container.style.setProperty("--size", size)
-    for (let x = 0; x < size; x++){
-        for (let y = 0; y < size; y++){
-            const div = document.createElement("div")
+    for (let x=0; x<size; x++){
+        for (let y=0; y<size; y++){
+        const div = document.createElement("div")
             div.classList.add("pixel")
 
-            const col = inSet([x,y]) //calculates colour of pixel
+            const col = render([x,y]) //calculates colour of pixel
             div.style.backgroundColor = rgbToHex(col[0],col[1],col[2])
             container.appendChild(div)
-
-            div.addEventListener("click", function(){
-                midpoint = [lerp(bounds[0],bounds[1],y/size),lerp(bounds[2],bounds[3],x/size)]
-                recalc()
-            })
+        
         }
     }
 }
+function render([x,y]){
+    if (pointInTri([5,10],[130,50],[40,140],[x,y])){
+        return [0,0,255]
+    } else{
+        return [0,0,0]
+    }
+}
 
-bounds = calculateBounds()
-console.log(bounds)
-draw(size)
+draw()
+
+console.log(test)
 
 recalcBtn.addEventListener("mousedown", function(){
     recalcBtn.style.borderStyle = "inset"
@@ -129,7 +96,6 @@ recalcBtn.addEventListener("mousedown", function(){
     recalcBtn.addEventListener("mouseup", function(){
         recalcBtn.style.borderStyle = "groove"
         recalcBtn.style.setProperty("--grad", 52)
-        recalc()
     })
 })
 
@@ -139,7 +105,5 @@ zoomBtn.addEventListener("mousedown", function(){
     zoomBtn.addEventListener("mouseup", function(){
         zoomBtn.style.borderStyle = "groove"
         zoomBtn.style.setProperty("--grad", 52)
-        radius = radius * 0.75
-        recalc()
     })
 })
